@@ -8,7 +8,6 @@
 # AUthor: aixiao@aixiao.me.
 #
 
-
 function DATE()
 {
     y=$(date "+%y");
@@ -47,20 +46,31 @@ function lightinfo()
     bindir="/root/gpio"
     ! test -d ${bindir} && exit 1;
     #时间范围
-    high="1400";
-    low="1430";
+    high="1900";
+    low="2400";
     #当前时间
     now=$(date +%H%M);
-    bcm_lightpin="20";
-    wiringpi_lightpin="28";
+    bcm_lightpin="21";
+    wiringpi_lightpin="29";
+    #wiringpi_infrared="20";
     
     #判断手机是否在线
-    phoneip="192.168.137.175";
+    phoneip="192.168.137.27";
     phonelogic="$(ping ${phoneip} -c 1 -S 1 &> /dev/null; echo $?)";
+
+    #判断人体红外线传感器
+    infrared=$(${bindir}/info_infrared ${wiringpi_infrared});
+
+    #距离传感器
+    l="60";
+    s="150";
+    wiringpi_tring="8";
+    wiringpi_echo="9";
+    #distance="$(${bindir}/info_ultrasound ${wiringpi_tring} ${wiringpi_echo})";
 
     #读取灯pin值
     lightpinvalue="$(${bindir}/info_pin ${wiringpi_lightpin})";
-    lightpinvalue="$(gpio -g read ${bcm_lightpin})";
+    #lightpinvalue="$(gpio -g read ${bcm_lightpin})";
 
     #开灯&关灯
     start_light="${bindir}/info_light ${wiringpi_lightpin} 1";
@@ -73,10 +83,14 @@ DATE;
 #get18b20data >> ~/temperature.txt;
 lightinfo;
 
+function main_()
+{
 while true; do
-    if [ "${now}" -ge "${high}" -a "${now}" -le "${low}" ]; then    #检测时间段
-        if [ "${phonelogic}" == "0" ]; then                         #检测手机IP
-            if test "${lightpinvalue}" = "0"; then                  #检测灯pin值
+    if [ "${now}" -ge "${high}" -a "${now}" -le "${low}" ]; then             #检测时间段
+        if [ "${phonelogic}" == "0" ]; then                                  #检测手机IP
+        #if [ "${infrared}" = "1" ]; then                                    #检测人体红外线
+        #if [ "${distance}" -ge ${l} -a "${distance}" -le ${s} ]; then       #检测距离范围
+            if test "${lightpinvalue}" = "0"; then                           #检测灯pin值
                 ${start_light};
             fi
         else
@@ -90,6 +104,20 @@ while true; do
         fi
     fi
     lightinfo;                                                      #再次获取信息
-    sleep 9;                                                        #睡眠
+    sleep 7;                                                        #睡眠
+done
+}
+
+while getopts :d pi
+do
+case ${pi} in
+    d)
+        daemon='&';
+        ;;
+    h|?)
+        :
+        ;;
+esac
 done
 
+eval main_ ${daemon}
