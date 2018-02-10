@@ -20,13 +20,5 @@ int main(int argc, char *argv[])
     int pin = atol(argv[1]);
     wiringPiSetup();
     pinMode(pin, OUTPUT);
-    /*
-    while(1) {
-        digitalWrite(28, HIGH);
-        digitalWrite(28, LOW);
-    }
-
-    return digitalRead(28);
-    */
     printf("%d\n", digitalRead(pin));
 }

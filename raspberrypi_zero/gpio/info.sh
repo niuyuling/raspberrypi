@@ -26,14 +26,16 @@ function SLEEP()
 function get18b20data()
 {
     MODEL="28-04174019f0ff";
-    if test -d "/sys/devices/w1_bus_master1/${MODEL}"; then
-        temperature=$(cat /sys/devices/w1_bus_master1/28-04174019f0ff/w1_slave | grep 't=' | sed 's/^.*t=//g' | awk '{print $1/1000}');
-        #echo $y年$m月$d日$H时$M分$S秒
-        echo -ne "当前室内温度: ";
-        echo -e "\e[1;31m${temperature}℃ \e[0m";
-    else
-        return 1;
-    fi
+    while true; do
+        if test -d "/sys/devices/w1_bus_master1/${MODEL}"; then
+            temperature=$(cat /sys/devices/w1_bus_master1/28-04174019f0ff/w1_slave | grep 't=' | sed 's/^.*t=//g' | awk '{print $1/1000}');
+            #echo $y年$m月$d日$H时$M分$S秒
+            #echo -ne "当前室内温度: ";
+            #echo -e "\e[1;31m${temperature}℃ \e[0m";
+            echo "${temperature}℃ " >> data/temperature.data;
+        fi
+        SLEEP 60;
+    done
 }
 
 function getcpudata()
@@ -46,9 +48,10 @@ function getcpudata()
     echo "Cpu Percentage:  ${percentage}%";
 }
 
-function lightinfo()
+function INIT()
 {
-    bindir="/root/gpio"
+    null="/dev/null";
+    bindir="/root/gpio";
     ! test -d ${bindir} && exit 1;
     #时间范围
     high="1500";
@@ -67,7 +70,11 @@ function lightinfo()
 
     #判断人体红外线传感器
     #infrared=$(${bindir}/info_infrared ${wiringpi_infrared});
-    infrared=$(cat ${bindir}/infrared.log 2> /dev/null);
+    infrared=$(cat ${bindir}/data/infrared.data 2> /dev/null);
+
+    #声音传感器
+    wiringpi_sound=25;
+    sound=$(cat ${bindir}/data/sound.data 2> /dev/null);
 
     #距离传感器
     l="60";
@@ -86,21 +93,15 @@ function lightinfo()
 
 }
 
-#DATE;
-#getcpudata;
-#get18b20data >> ~/temperature.txt;
-lightinfo;
-
-
 function WHILE()
 {
     while true; do
-        ${bindir}/info_infrared ${wiringpi_infrared} > infrared.log
-        SLEEP 1
+        ${bindir}/info_infrared ${wiringpi_infrared} > data/infrared.data;
+        SLEEP 1;
     done
 }
 
-function main_()
+function light()
 {
 while true; do
     if [ "${now}" -ge "${high}" -a "${now}" -le "${low}" ]; then             #检测时间段
@@ -122,14 +123,37 @@ while true; do
             ${stop_light};
         fi
     fi
-    lightinfo;                                                      #再次获取信息
+    INIT;                                                      #再次获取信息
     SLEEP 1;                                                        #睡眠
 done
 }
 
-while getopts :ds: pi
+function light_daemon()
+{
+    while true; do
+        ${bindir}/info_infrared ${wiringpi_infrared} > data/infrared.data;
+        SLEEP 1;
+    done
+}
+
+function sound_daemon()
+{
+    while :; do
+        ${bindir}/info_sound ${wiringpi_sound} > data/sound.data
+        SLEEP 0.3;
+    done
+}
+
+function sound()
+{
+    :
+}
+
+
+INIT;
+while getopts :ds:x ai
 do
-case ${pi} in
+case ${ai} in
     d)
         daemon='&';
         ;;
@@ -138,7 +162,8 @@ case ${pi} in
             "stop")
                 array=$(ls ${bindir}/log/)
                 for arr in ${array[@]}; do
-                    kill $(cat ${bindir}/log/${arr})
+                    kill $(cat ${bindir}/log/${arr}) &> ${null}
+                    rm ${bindir}/log/${arr} 2> ${null}
                 done
                 exit 0
                 ;;
@@ -148,12 +173,19 @@ case ${pi} in
         esac
         exit 0
         ;;
+    x)
+        set -x
+        ;;
     h|?)
-        echo "
-raspberrypi zero w 智能灯控
-$0 Usage: $0 [-?|h] [-d] [-s]
-    -d Daemon.
-    -s kill Daemon, signal: stop.
+        echo -ne "
+\e[1;31mraspberrypi zero w 智能家居\e[0m
+$0 Usage: $0 [-?|h] [-d] [-s] [-x] [light|temperature]
+    -d : Daemon.
+    -s : kill Daemon, signal: stop.
+    -x : Print commands and their arguments as they are executed.
+
+    light       : light Modular.
+    temperature : temperature Modular.
 
 by aixiao.
 "
@@ -162,8 +194,26 @@ exit 0
 esac
 done
 
-WHILE &
-WHILEID="$(echo $!)"
-echo ${WHILEID} > log/infrared.pid 2> /dev/null
-eval main_ ${daemon}
-echo $! > log/main.pid 2> /dev/null
+shift $((OPTIND-1))
+case ${1} in
+    light)
+        light_daemon &
+        light_daemon_id="$(echo $!)"
+        echo ${light_daemon_id} > log/infrared.pid 2> ${null}
+        eval light ${daemon}
+        echo $! > log/light.pid 2> ${null}
+        ;;
+    temperature)
+        #get18b20data &
+        #echo $! > log/temperature.pid 2> ${null}
+        :
+        ;;
+    sound)
+        sound_daemon &
+        echo $! > log/sound.pid 2> ${null};
+        eval sound ${daemon};
+        ;;
+    *)
+        exit 1;
+        ;;
+esac
