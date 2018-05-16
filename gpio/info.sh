@@ -4,6 +4,7 @@
 # GPIO module
 # Date: 20180118
 # Time: 17:17
+#  
 #
 # AUthor: aixiao@aixiao.me.
 #
@@ -60,7 +61,7 @@ function INIT()
 	stop=0;
 	
     #时间范围
-    high="1730";
+    high="1700";
     low="2300";
 
     #当前时间
@@ -97,7 +98,7 @@ function INIT()
 }
 	#风扇
 	wiringpi_wind="1";			#脚位
-	l_temperature="20";			#不高于这个摄氏温度
+	l_temperature="28";			#不高于这个摄氏温度
 	temperature=$(cat ${bindir}/data/wind.data 2> ${null});				#温度,摄氏度
 	start_wind="${bindir}/info_light ${wiringpi_wind} 1";		#${wiringpi_wind} 高电压
 	stop_wind="${bindir}/info_light ${wiringpi_wind} 0";		#${wiringpi_wind} 低电压
@@ -105,7 +106,7 @@ function INIT()
 	
 }
 
-#红外线守护进程
+#红外线守护进程.
 function infrared()
 {
     while true; do
@@ -114,12 +115,12 @@ function infrared()
     done
 }
 
-#灯守护进程
-function light_daemon()
+#灯主进程.
+function light()
 {
 while true; do
     if test ${W} != "0"; then                           : 不是周日.
-        if [ $now -ge $high -a $now -le $low ]; then	: 7:30 - 19:00自动检测,其他时间段不管,手动.
+        if [ $now -ge $high -a $now -le $low ]; then	: 19:30 - 23:00自动检测,其他时间段不管,手动.
             if [ "${phonelogic}" == "0" ]; then			: phone 如果在线.
                 if test "${lightpinvalue}" = "0"; then	: 检测灯pin值.
                     ${start_light};
@@ -144,6 +145,10 @@ while true; do
 				    if test "${lightpinvalue}" = "0"; then		: 检测灯pin值.
 					    ${start_light};
                     fi
+                else
+                    if test "${lightpinvalue}" = "1"; then
+                        ${stop_light};
+                    fi
                 fi
             else
                 if [ "${phonelogic}" == "1" ]; then             : 不在时间段就关闭,手动.
@@ -158,6 +163,7 @@ SLEEP 60;
 done
 }
 
+#声音传感器守护进程.
 function sound_daemon()
 {
     while :; do
@@ -166,40 +172,43 @@ function sound_daemon()
     done
 }
 
+#声音传感器主进程.
 function sound()
 {
     :
 }
 
-#灯主进程
+#风扇守护进程.
+function wind_daemon()
+{
+	while true; do
+		${bindir}/wind > ${bindir}/data/wind.data;		: 温度传感器获取室内温度信息.
+		SLEEP 9;
+	done
+}
+
+#风扇主进程.
 function wind()
 {
 INIT
     while true ; do
-        if [[ "${phonelogic}" == "0" ]]; then	: 手机在不在.
-		if [[ "${temperature}" -ge "${l_temperature}" ]]; then	: 温度大于37摄氏度.
-            echo "温度够"
-			if test "${status_wind}" = "0"; then
-				${start_wind};
+        if [[ "${phonelogic}" == "0" ]]; then	: 手机在不在?
+			if [[ "${temperature}" -ge "${l_temperature}" ]]; then	: 温度大于等于$l_temperature摄氏度.
+				if test "${status_wind}" = "0"; then
+					${start_wind};
+					SLEEP 180;		: 开启后风扇运行3分钟.
+					${stop_wind};
+					SLEEP 60;		: 开启后风扇停止运行1分钟,这样是怕吹感冒了.
+				fi
+			else
+				test "${status_wind}" = "1" && ${stop_wind};		: 小于$l_temperature温度就检测或关闭.
 			fi
 		else
-			test "${status_wind}" = "1" && ${stop_wind};
+			test "${status_wind}" = "1" && ${stop_wind};		: 手机不再就检测或关闭.
 		fi
-		else
-			test "${status_wind}" = "1" && ${stop_wind};
-		fi
-		SLEEP 9;
+		SLEEP 7;
 		INIT;
     done
-}
-
-#风扇守护进程
-function wind_daemon()
-{
-	while true; do
-		${bindir}/wind > ${bindir}/data/wind.data;
-		SLEEP 60;
-	done
 }
 
 #主进程
@@ -233,17 +242,18 @@ case ${ai} in
         ;;
     h|?)
         echo -ne "
-\e[1;31mraspberrypi zero w GPIO Modular\e[0m
+\e[1;31mraspberrypi zero w & 3, GPIO Modular\e[0m
 $0 Usage: $0 [-?|h] [-d] [-s] [-x] [light|temperature|wind]
-    -d : Daemon.
-    -s : kill Daemon, signal: stop.
-    -x : Print commands and their arguments as they are executed.
+    -?|h : Printf Help
+    -d   : Daemon.
+    -s   : kill Daemon, signal: stop.
+    -x   : Print commands and their arguments as they are executed.
 
     light       : light Modular.
     temperature : temperature Modular.
     wind        : Wind Modular.
 
-by aixiao.
+by aixiao@aixiao.me.
 "
 exit 0
         ;;
@@ -256,7 +266,7 @@ eval array=(${@})
 for i in ${array[@]}; do
 case $i in
     light)
-        eval light_daemon ${daemon}
+        eval light ${daemon}
         echo $! > ${bindir}/log/light.pid 2> ${null}
         ;;
     temperature)
