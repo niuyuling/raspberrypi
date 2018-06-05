@@ -48,6 +48,8 @@ function INIT()
     bindir="/root/gpio";
     ! test -d ${bindir} && exit 1;
 	
+	. conf/info.conf
+	
 	#时间
 	y=$(date "+%y");
     m=$(date "+%m");
@@ -59,16 +61,12 @@ function INIT()
 	
 	start=1;
 	stop=0;
-	
-    #时间范围
-    high="1700";
-    low="2300";
 
     #当前时间
     now=$(date +%H%M);
     
     #判断手机是否在线
-    phoneip="192.168.99.60";
+    #phoneip="192.168.99.60";
     phonelogic="$(ping ${phoneip} -c 1 -S 1 &> /dev/null; echo $?)";
 
     #判断人体红外线传感器
@@ -92,13 +90,15 @@ function INIT()
     #lightpinvalue="$(gpio -g read ${bcm_lightpin})";
 
     #开灯&关灯
-	wiringpi_lightpin="4";
+    #high="1700";		#时间范围
+    #low="2300";
+	#wiringpi_lightpin="4";
     start_light="${bindir}/info_light ${wiringpi_lightpin} 1";
     stop_light="${bindir}/info_light ${wiringpi_lightpin} 0";
 }
 	#风扇
-	wiringpi_wind="1";			#脚位
-	l_temperature="28";			#不高于这个摄氏温度
+	#wiringpi_wind="1";			#脚位
+	#l_temperature="28";			#不高于这个摄氏温度
 	temperature=$(cat ${bindir}/data/wind.data 2> ${null});				#温度,摄氏度
 	start_wind="${bindir}/info_light ${wiringpi_wind} 1";		#${wiringpi_wind} 高电压
 	stop_wind="${bindir}/info_light ${wiringpi_wind} 0";		#${wiringpi_wind} 低电压
@@ -118,6 +118,7 @@ function infrared()
 #灯主进程.
 function light()
 {
+INIT;
 while true; do
     if test ${W} != "0"; then                           : 不是周日.
         if [ $now -ge $high -a $now -le $low ]; then	: 19:30 - 23:00自动检测,其他时间段不管,手动.
@@ -140,7 +141,7 @@ while true; do
     else	
         : 还一个周日
         if test "$W" = "0"; then								: 是周日.
-            if [ ${now} -le ${low} -a ${now} -ge 0800 ]; then	: 8:00 - 23:00,自动化.
+            if [ ${now} -le ${low} -a ${now} -ge ${s_low} ]; then	: 8:00 - 23:00,自动化.
                 if [ "${phonelogic}" == "0" ]; then				: phone 如果在线.
 				    if test "${lightpinvalue}" = "0"; then		: 检测灯pin值.
 					    ${start_light};
@@ -151,9 +152,10 @@ while true; do
                     fi
                 fi
             else
-                if [ "${phonelogic}" == "1" ]; then             : 不在时间段就关闭,手动.
-                    ${stop_light};
-                fi
+                            : 不在时间段就关闭,手动.
+				if test "${lightpinvalue}" = "1"; then
+						${stop_light};
+				fi
             fi
         fi				
     fi	
@@ -196,9 +198,9 @@ INIT
 			if [[ "${temperature}" -ge "${l_temperature}" ]]; then	: 温度大于等于$l_temperature摄氏度.
 				if test "${status_wind}" = "0"; then
 					${start_wind};
-					SLEEP 180;		: 开启后风扇运行3分钟.
+					SLEEP $step_wait;		: 开启后风扇运行5分钟.
 					${stop_wind};
-					SLEEP 60;		: 开启后风扇停止运行1分钟,这样是怕吹感冒了.
+					SLEEP $step_stop;		: 开启后风扇停止运行1分钟,这样是怕吹感冒了.
 				fi
 			else
 				test "${status_wind}" = "1" && ${stop_wind};		: 小于$l_temperature温度就检测或关闭.
@@ -222,6 +224,8 @@ case ${ai} in
         daemon='&';
         ;;
     s)
+		#echo $@
+		#exit
         case $OPTARG in
             "stop")
                 array=$(ls ${bindir}/log/)
@@ -231,6 +235,21 @@ case ${ai} in
                 done
                 exit 0
                 ;;
+			"reload")
+				case $3 in
+					"wind")
+						kill $(cat ${bindir}/log/wind_daemon.pid) 2> ${null}
+						kill $(cat ${bindir}/log/wind.pid) 2> ${null}
+						: 重启wind
+						bash $0 -d wind
+						;;
+					"light")
+						kill `cat ${bindir}/log/light.pid` 2> ${null}
+						: 重启light
+						bash $0 -d light
+						;;
+				esac
+				;;
             *)
                 :
                 ;;
@@ -246,7 +265,7 @@ case ${ai} in
 $0 Usage: $0 [-?|h] [-d] [-s] [-x] [light|temperature|wind]
     -?|h : Printf Help
     -d   : Daemon.
-    -s   : kill Daemon, signal: stop.
+    -s   : kill Daemon, signal: stop, reload.
     -x   : Print commands and their arguments as they are executed.
 
     light       : light Modular.
@@ -281,9 +300,9 @@ case $i in
         ;;
     wind)
         wind_daemon &
-        echo $! > ${bindir}/log/wind.pid 2> ${null}
+        echo $! > ${bindir}/log/wind_daemon.pid 2> ${null}
         eval wind ${daemon}
-        echo $! > ${bindir}/log/main.pid 2> ${null}
+        echo $! > ${bindir}/log/wind.pid 2> ${null}
         ;;
     *)
         exit 1;
