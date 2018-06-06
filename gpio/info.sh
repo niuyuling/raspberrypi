@@ -48,7 +48,7 @@ function INIT()
     bindir="/root/gpio";
     ! test -d ${bindir} && exit 1;
 	
-	. conf/info.conf
+	. ${bindir}/conf/info.conf
 	
 	#时间
 	y=$(date "+%y");
@@ -228,6 +228,17 @@ case ${ai} in
 		#exit
         case $OPTARG in
             "stop")
+				case $3 in
+					"wind")
+						kill $(cat ${bindir}/log/wind_daemon.pid) 2> ${null}
+						kill $(cat ${bindir}/log/wind.pid) 2> ${null}
+						exit 1;
+						;;
+					"light")
+						kill `cat ${bindir}/log/light.pid` 2> ${null}
+						exit 1;
+						;;
+				esac
                 array=$(ls ${bindir}/log/)
                 for arr in ${array[@]}; do
                     kill $(cat ${bindir}/log/${arr}) &> ${null}
