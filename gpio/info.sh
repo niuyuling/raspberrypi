@@ -184,7 +184,7 @@ function sound()
 function wind_daemon()
 {
 	while true; do
-		${bindir}/wind > ${bindir}/data/wind.data;		: 温度传感器获取室内温度信息.
+		${bindir}/wind -d ${device} > ${bindir}/data/wind.data;		: 温度传感器获取室内温度信息.
 		SLEEP 9;
 	done
 }

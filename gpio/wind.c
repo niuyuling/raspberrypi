@@ -7,9 +7,27 @@
 #include <time.h>
 #include <stdlib.h>
 
-#define N 80
+#define N 99
 
 int main(int argc, char *argv[])
+{
+    int ch;
+    opterr = 0;
+    while((ch = getopt(argc, argv, "d:h?")) != -1)
+	switch (ch) {
+	case 'd':
+        _main(optarg);
+	    break;
+	case 'h': case '?':
+        printf("wind -d device\n");
+	    exit(0);
+	    break;
+	default:
+	    ;
+	}
+}
+
+int _main(char *optarg)
 {
     char path[50] = "/sys/bus/w1/devices/";
     char rom[20];
@@ -19,6 +37,9 @@ int main(int argc, char *argv[])
     FILE *fp;
     char *temp;
     float value;
+    char *device;               // 设备
+	if(optarg == '\0')
+	    strcmp(device, optarg);
 	
     system("sudo modprobe w1-gpio");
     system("sudo modprobe w1-therm");
@@ -27,7 +48,7 @@ int main(int argc, char *argv[])
     }
 
     while((direntp = readdir(dirp)) != NULL) {
-        if(strstr(direntp->d_name, "28-0")) {
+        if(strstr(direntp->d_name, device)) {
             strcpy(rom, direntp->d_name);
         }
     }
