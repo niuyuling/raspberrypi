@@ -19,5 +19,6 @@ int main(int argc, char *argv[])
 
     status = digitalRead(pin);
     printf("%d\n", status);
-        
+    
+    return status;
 }

@@ -1,4 +1,9 @@
-#include <stdio.h>
+/* DS18B20 温度传感器
+ *
+ *
+ */
+
+
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -11,6 +16,8 @@
 
 int main(int argc, char *argv[])
 {
+	int _main(char *optarg);
+
     int ch;
     opterr = 0;
     while((ch = getopt(argc, argv, "d:h?")) != -1)
@@ -25,6 +32,7 @@ int main(int argc, char *argv[])
 	default:
 	    ;
 	}
+	return 1;
 }
 
 int _main(char *optarg)
@@ -37,10 +45,10 @@ int _main(char *optarg)
     FILE *fp;
     char *temp;
     float value;
-    char *device;               // 设备
-	if(optarg == '\0')
-	    strcmp(device, optarg);
-	
+    //char *device;               // 设备
+	//if(optarg == '\0') {
+	//    strcmp(device, optarg);
+	//}
     system("sudo modprobe w1-gpio");
     system("sudo modprobe w1-therm");
     if((dirp = opendir(path)) == NULL) {
@@ -48,7 +56,7 @@ int _main(char *optarg)
     }
 
     while((direntp = readdir(dirp)) != NULL) {
-        if(strstr(direntp->d_name, device)) {
+        if(strstr(direntp->d_name, optarg)) {
             strcpy(rom, direntp->d_name);
         }
     }
@@ -71,6 +79,5 @@ int _main(char *optarg)
     printf("%.0f\n", value);
 
     fclose(fp);
-    return 0;
+    return value;
 }
-

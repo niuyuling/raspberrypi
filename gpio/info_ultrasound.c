@@ -5,7 +5,6 @@
 
 int main(int argc, char * argv[])
 {
-    int i;
     if( argc != 3) {
         exit(0);
     }
