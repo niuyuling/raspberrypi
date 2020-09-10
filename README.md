@@ -9,9 +9,8 @@ raspberrypi zero w GPIO 实现的智能家居
 - 谢谢@威威君帮写的app
 
 
-app配合socket服务器设置
-![Image text](https://github.com/niuyuling/raspberrypi/blob/master/app/Screenshot_LightControl_20180906-120133.png)
+app配合socket服务器设置  
+<img src="https://github.com/niuyuling/raspberrypi/blob/master/app/Screenshot_LightControl_20180906-120133.png" height="1000px" width="500px" >
 
-
-app主界面
-![Image text](https://github.com/niuyuling/raspberrypi/blob/master/app/Screenshot_LightControl_20180906-120216.png)
+app主界面  
+<img src="https://github.com/niuyuling/raspberrypi/blob/master/app/Screenshot_LightControl_20180906-120216.png" height="1000px" width="500px" >

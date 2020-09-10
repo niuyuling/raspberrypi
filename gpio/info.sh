@@ -47,20 +47,20 @@ function INIT()
     null="/dev/null";
     bindir="/root/gpio";
     ! test -d ${bindir} && exit 1;
-	
-	. ${bindir}/conf/info.conf
-	
-	#时间
-	y=$(date "+%y");
+
+    . ${bindir}/conf/info.conf
+
+    #时间
+    y=$(date "+%y");
     m=$(date "+%m");
     d=$(date "+%d");
     H=$(date "+%H");
     M=$(date "+%M");
     S=$(date "+%S");
-	W=$(date "+%w");	: 周几?
-	
-	start=1;
-	stop=0;
+    W=$(date "+%w");    : 周几?
+
+    start=1;
+    stop=0;
 
     #当前时间
     now=$(date +%H%M);
@@ -70,7 +70,7 @@ function INIT()
     phonelogic="$(ping ${phoneip} -c 1 -S 1 &> /dev/null; echo $?)";
 
     #判断人体红外线传感器
-	wiringpi_infrared="6";
+    wiringpi_infrared="6";
     #infrared=$(${bindir}/info_infrared ${wiringpi_infrared});
     infrared=$(cat ${bindir}/data/infrared.data 2> /dev/null);
 
@@ -90,23 +90,26 @@ function INIT()
     #lightpinvalue="$(gpio -g read ${bcm_lightpin})";
 
     #开灯&关灯
-    #high="1700";		#时间范围
+    #high="1700";               #时间范围
     #low="2300";
-	#wiringpi_lightpin="4";
+    #wiringpi_lightpin="4";
     start_light="${bindir}/info_light ${wiringpi_lightpin} 1";
     stop_light="${bindir}/info_light ${wiringpi_lightpin} 0";
 }
-	#风扇
-	#wiringpi_wind="1";			#脚位
-	#l_temperature="28";			#不高于这个摄氏温度
-	temperature=$(cat ${bindir}/data/wind.data 2> ${null});				#温度,摄氏度
-	start_wind="${bindir}/info_light ${wiringpi_wind} 1";		#${wiringpi_wind} 高电压
-	stop_wind="${bindir}/info_light ${wiringpi_wind} 0";		#${wiringpi_wind} 低电压
-	status_wind="$(${bindir}/info_pin ${wiringpi_wind})";		: PIN状态.
-	
+    #风扇
+    #wiringpi_wind="1";         #脚位
+    #l_temperature="28";        #不高于这个摄氏温度
+    temperature=$(cat ${bindir}/data/wind.data 2> ${null});      #温度,摄氏度
+    start_wind="${bindir}/info_light ${wiringpi_wind} 1";        #${wiringpi_wind} 高电压
+    stop_wind="${bindir}/info_light ${wiringpi_wind} 0";         #${wiringpi_wind} 低电压
+    status_wind="$(${bindir}/info_pin ${wiringpi_wind})";        : PIN状态.
+
+    #霍尔元件
+    helement_pin="1";
+
 }
 
-#红外线守护进程.
+# 红外线守护进程.
 function infrared()
 {
     while true; do
@@ -115,15 +118,15 @@ function infrared()
     done
 }
 
-#灯主进程.
+# 灯主进程.
 function light()
 {
 INIT;
 while true; do
     if test ${W} != "0"; then                           : 不是周日.
-        if [ $now -ge $high -a $now -le $low ]; then	: 19:30 - 23:00自动检测,其他时间段不管,手动.
-            if [ "${phonelogic}" == "0" ]; then			: phone 如果在线.
-                if test "${lightpinvalue}" = "0"; then	: 检测灯pin值.
+        if [ $now -ge $high -a $now -le $low ]; then    : 19:30 - 23:00自动检测,其他时间段不管,手动.
+            if [ "${phonelogic}" == "0" ]; then         : phone 如果在线.
+                if test "${lightpinvalue}" = "0"; then  : 检测灯pin值.
                     ${start_light};
                 fi
             else
@@ -138,13 +141,13 @@ while true; do
                 fi
             fi
         fi
-    else	
+    else
         : 还一个周日
-        if test "$W" = "0"; then								: 是周日.
-            if [ ${now} -le ${low} -a ${now} -ge ${s_low} ]; then	: 8:00 - 23:00,自动化.
-                if [ "${phonelogic}" == "0" ]; then				: phone 如果在线.
-				    if test "${lightpinvalue}" = "0"; then		: 检测灯pin值.
-					    ${start_light};
+        if test "$W" = "0"; then                                    : 是周日.
+            if [ ${now} -le ${low} -a ${now} -ge ${s_low} ]; then   : 8:00 - 23:00,自动化.
+                if [ "${phonelogic}" == "0" ]; then                 : phone 如果在线.
+                    if test "${lightpinvalue}" = "0"; then          : 检测灯pin值.
+                        ${start_light};
                     fi
                 else
                     if test "${lightpinvalue}" = "1"; then
@@ -153,19 +156,19 @@ while true; do
                 fi
             else
                             : 不在时间段就关闭,手动.
-				if test "${lightpinvalue}" = "1"; then
-						${stop_light};
-				fi
+                if test "${lightpinvalue}" = "1"; then
+                    ${stop_light};
+                fi
             fi
-        fi				
-    fi	
+        fi                
+    fi    
 
 INIT;
 SLEEP 60;
 done
 }
 
-#声音传感器守护进程.
+# 声音传感器守护进程.
 function sound_daemon()
 {
     while :; do
@@ -174,46 +177,68 @@ function sound_daemon()
     done
 }
 
-#声音传感器主进程.
+# 声音传感器主进程.
 function sound()
 {
     :
 }
 
-#风扇守护进程.
+# 风扇守护进程.
 function wind_daemon()
 {
-	while true; do
-		${bindir}/wind -d ${device} > ${bindir}/data/wind.data;		: 温度传感器获取室内温度信息.
-		SLEEP 9;
-	done
+    while true; do
+        ${bindir}/wind -d ${device} > ${bindir}/data/wind.data;       : 温度传感器获取室内温度信息.
+        SLEEP 9;
+    done
 }
 
-#风扇主进程.
+# 风扇主进程.
 function wind()
 {
 INIT
     while true ; do
-        if [[ "${phonelogic}" == "0" ]]; then	: 手机在不在?
-			if [[ "${temperature}" -ge "${l_temperature}" ]]; then	: 温度大于等于$l_temperature摄氏度.
-				if test "${status_wind}" = "0"; then
-					${start_wind};
-					SLEEP $step_wait;		: 开启后风扇运行5分钟.
-					${stop_wind};
-					SLEEP $step_stop;		: 开启后风扇停止运行1分钟,这样是怕吹感冒了.
-				fi
-			else
-				test "${status_wind}" = "1" && ${stop_wind};		: 小于$l_temperature温度就检测或关闭.
-			fi
-		else
-			test "${status_wind}" = "1" && ${stop_wind};		: 手机不再就检测或关闭.
-		fi
-		SLEEP 7;
-		INIT;
+        if [[ "${phonelogic}" == "0" ]]; then    : 手机在不在?
+            if [[ "${temperature}" -ge "${l_temperature}" ]]; then    : 温度大于等于$l_temperature摄氏度.
+                if test "${status_wind}" = "0"; then
+                    ${start_wind};
+                    SLEEP $step_wait;                                 : 开启后风扇运行5分钟.
+                    ${stop_wind};
+                    SLEEP $step_stop;                                 : 开启后风扇停止运行1分钟,这样是怕吹感冒了.
+                fi
+            else
+                test "${status_wind}" = "1" && ${stop_wind};          : 小于$l_temperature温度就检测或关闭.
+            fi
+        else
+            test "${status_wind}" = "1" && ${stop_wind};              : 手机不再就检测或关闭.
+        fi
+        SLEEP 7;
+        INIT;
     done
 }
 
-#主进程
+# 霍尔元件守护进程
+function helement_daemon()
+{
+    while true; do
+        ${bindir}/helement ${helement_pin} > ${bindir}/data/helement.data;    : 霍尔传感器获取状态信息.
+        SLEEP 0.1;
+    done
+}
+
+# 霍尔元件主进程
+function helement()
+{
+    while true; do
+        DATE=$(date "+%y年%m月%d日%H时%M分%S秒");
+        status="$(cat ${bindir}/data/helement.data)";
+        if [ "$status" = "0" ]; then
+            /root/c/c 192.168.1.89 "echo ${DATE} 请注意,抽屉已经打开"
+        fi
+    done
+}
+
+
+# 主进程
 function main_()
 {
 INIT;
@@ -224,21 +249,21 @@ case ${ai} in
         daemon='&';
         ;;
     s)
-		#echo $@
-		#exit
+        #echo $@
+        #exit
         case $OPTARG in
             "stop")
-				case $3 in
-					"wind")
-						kill $(cat ${bindir}/log/wind_daemon.pid) 2> ${null}
-						kill $(cat ${bindir}/log/wind.pid) 2> ${null}
-						exit 1;
-						;;
-					"light")
-						kill `cat ${bindir}/log/light.pid` 2> ${null}
-						exit 1;
-						;;
-				esac
+                case $3 in
+                    "wind")
+                        kill $(cat ${bindir}/log/wind_daemon.pid) 2> ${null}
+                        kill $(cat ${bindir}/log/wind.pid) 2> ${null}
+                        exit 1;
+                        ;;
+                    "light")
+                        kill `cat ${bindir}/log/light.pid` 2> ${null}
+                        exit 1;
+                        ;;
+                esac
                 array=$(ls ${bindir}/log/)
                 for arr in ${array[@]}; do
                     kill $(cat ${bindir}/log/${arr}) &> ${null}
@@ -246,21 +271,21 @@ case ${ai} in
                 done
                 exit 0
                 ;;
-			"reload")
-				case $3 in
-					"wind")
-						kill $(cat ${bindir}/log/wind_daemon.pid) 2> ${null}
-						kill $(cat ${bindir}/log/wind.pid) 2> ${null}
-						: 重启wind
-						bash $0 -d wind
-						;;
-					"light")
-						kill `cat ${bindir}/log/light.pid` 2> ${null}
-						: 重启light
-						bash $0 -d light
-						;;
-				esac
-				;;
+            "reload")
+                case $3 in
+                    "wind")
+                        kill $(cat ${bindir}/log/wind_daemon.pid) 2> ${null}
+                        kill $(cat ${bindir}/log/wind.pid) 2> ${null}
+                        : 重启wind
+                        bash $0 -d wind
+                        ;;
+                    "light")
+                        kill `cat ${bindir}/log/light.pid` 2> ${null}
+                        : 重启light
+                        bash $0 -d light
+                        ;;
+                esac
+                ;;
             *)
                 :
                 ;;
@@ -282,8 +307,10 @@ $0 Usage: $0 [-?|h] [-d] [-s] [-x] [light|temperature|wind]
     light       : light Modular.
     temperature : temperature Modular.
     wind        : Wind Modular.
+    helement    : Hall element.
 
 by aixiao@aixiao.me.
+
 "
 exit 0
         ;;
@@ -314,6 +341,12 @@ case $i in
         echo $! > ${bindir}/log/wind_daemon.pid 2> ${null}
         eval wind ${daemon}
         echo $! > ${bindir}/log/wind.pid 2> ${null}
+        ;;
+    helement)
+        helement_daemon &
+        echo $! > ${bindir}/log/helement_daemon.pid 2> ${null};
+        eval helement ${daemon}
+        echo $! > ${bindir}/log/helement.pid 2> ${null}
         ;;
     *)
         exit 1;

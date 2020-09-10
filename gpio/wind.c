@@ -1,8 +1,7 @@
-/* DS18B20 温度传感器
- *
+/*
+ * DS18B20 温度传感器(Debian jessie)
  *
  */
-
 
 #include <stdio.h>
 #include <unistd.h>
@@ -12,51 +11,27 @@
 #include <time.h>
 #include <stdlib.h>
 
-#define N 99
+#define BUF 270
 
-int main(int argc, char *argv[])
-{
-	int _main(char *optarg);
-
-    int ch;
-    opterr = 0;
-    while((ch = getopt(argc, argv, "d:h?")) != -1)
-	switch (ch) {
-	case 'd':
-        _main(optarg);
-	    break;
-	case 'h': case '?':
-        printf("wind -d device\n");
-	    exit(0);
-	    break;
-	default:
-	    ;
-	}
-	return 1;
-}
-
-int _main(char *optarg)
+int _read_ds18b20(char *device)
 {
     char path[50] = "/sys/bus/w1/devices/";
     char rom[20];
-    char buffer[N+1];
+    char buffer[BUF + 1];
     DIR *dirp;
     struct dirent *direntp;
     FILE *fp;
     char *temp;
     float value;
-    //char *device;               // 设备
-	//if(optarg == '\0') {
-	//    strcmp(device, optarg);
-	//}
+
     system("sudo modprobe w1-gpio");
     system("sudo modprobe w1-therm");
-    if((dirp = opendir(path)) == NULL) {
+    if ((dirp = opendir(path)) == NULL) {
         exit(0);
     }
 
-    while((direntp = readdir(dirp)) != NULL) {
-        if(strstr(direntp->d_name, optarg)) {
+    while ((direntp = readdir(dirp)) != NULL) {
+        if (strstr(direntp->d_name, device)) {
             strcpy(rom, direntp->d_name);
         }
     }
@@ -67,9 +42,9 @@ int _main(char *optarg)
     //printf("%s\n", path);
 
     if ((fp = fopen(path, "r")) < 0) {
-        exit(0);    /* 文件不存在,则退出. */
+        exit(0);                /* 文件不存在,则退出. */
     }
-    while(fgets(buffer, N, fp) != NULL){
+    while (fgets(buffer, BUF, fp) != NULL) {
         ;
     }
 
@@ -81,3 +56,23 @@ int _main(char *optarg)
     fclose(fp);
     return value;
 }
+
+int main(int argc, char *argv[])
+{
+    int ch;
+    opterr = 0;
+    while ((ch = getopt(argc, argv, "d:h?")) != -1)
+        switch (ch) {
+        case 'd':
+            _read_ds18b20(optarg);
+            break;
+        case 'h': case '?':
+            printf("wind -d device\n");
+            exit(0);
+            break;
+        default:
+            ;
+        }
+    return 1;
+}
+
