@@ -10,7 +10,7 @@ raspberrypi zero w GPIO 实现的智能家居
 
 
 app配合socket服务器设置  
-<img src="https://github.com/niuyuling/raspberrypi/blob/master/app/Screenshot_LightControl_20180906-120133.png" height="1000px" width="500px" >
+<img src="https://github.com/niuyuling/raspberrypi/blob/master/app/Screenshot_20200910-131104_LightControl.png" height="1000px" width="500px" >
 
 app主界面  
-<img src="https://github.com/niuyuling/raspberrypi/blob/master/app/Screenshot_LightControl_20180906-120216.png" height="1000px" width="500px" >
+<img src="https://github.com/niuyuling/raspberrypi/blob/master/app/Screenshot_20200910-131834_LightControl.png" height="1000px" width="500px" >
